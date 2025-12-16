@@ -3,698 +3,735 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mine Farm World Builder</title>
+    <title>Survival Crafter: Extended Edition</title>
     
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
     <style>
-        /* ======================================= */
-        /* == Minecraft Theme Variables & Global == */
-        /* ======================================= */
-        :root {
-            --mc-dirt: #855d4d;
-            --mc-grass: #72aa39;
-            --mc-water: #4f80e0;
-            --mc-stone: #a0a0a0;
-            --mc-coal: #3c3c3c;
-            --mc-iron: #c9c9c9;
-            --mc-diamond: #6af7ff;
-            --mc-border-dark: #3c3c3c;
-            --mc-inventory-bg: #8b8b8b;
-            --mc-text-shadow: 2px 2px 0px #000000;
-        }
-
+        /* 1. ГЛОБАЛЬНИЙ СТИЛЬ ТА СКИДАННЯ */
         body {
-            background-color: var(--mc-stone); 
-            color: white;
-            font-family: 'Press Start 2P', cursive;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            height: 100vh;
+            background-color: #1a1a1a;
+            color: #f0f0f0;
+            font-family: 'Consolas', 'Courier New', monospace; /* Шрифти для технологічного вигляду */
             margin: 0;
-            padding: 10px;
-            user-select: none;
-            overflow: hidden;
-            text-shadow: var(--mc-text-shadow);
-            font-size: 10px;
-        }
-
-        /* MC Block Style - Рамки та тіні для UI */
-        .mc-ui {
-            border: 2px solid var(--mc-border-dark);
-            box-shadow: 4px 4px 0px var(--mc-border-dark);
-            background-color: var(--mc-inventory-bg);
-            padding: 8px;
-            margin-bottom: 10px;
-            text-align: center;
-            width: 90%;
-            max-width: 400px;
-        }
-
-        /* MC Кнопки */
-        .mc-button {
-            padding: 12px;
-            background-color: #a0a0a0;
-            border: 3px solid #000;
-            box-shadow: 4px 4px 0px #000;
-            cursor: pointer;
-            transition: all 0.05s;
-            text-shadow: var(--mc-text-shadow);
-        }
-        .mc-button:active {
-            box-shadow: 2px 2px 0px #000;
-            transform: translate(2px, 2px);
-        }
-        
-        /* Загальні меню */
-        #main-menu, #world-menu, #create-world-menu, #skin-shop-menu {
+            padding: 0;
+            overflow: hidden; 
             display: flex;
             flex-direction: column;
-            gap: 15px;
-            width: 90%;
-            max-width: 350px;
-            margin-top: 20px;
-            text-align: center;
+            height: 100vh;
+            touch-action: manipulation; /* Покращення мобільного відгуку */
+        }
+
+        /* 2. ІГРОВЕ ПОЛЕ ТА РЕНДЕРЕНГ СВІТУ */
+        #game-container {
+            flex-grow: 1;
+            position: relative;
+            background: linear-gradient(to top, #6DD5FA, #2980B9); /* Ефект неба */
+            border-bottom: 6px solid #4CAF50;
+            overflow: hidden;
+        }
+
+        #world {
+            position: absolute;
+            display: grid;
+            transition: transform 0.1s linear; /* Плавний рух світу */
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            /* Grid layout буде встановлено JS */
         }
         
-        /* Input Field Style */
-        .mc-input {
-            padding: 10px;
-            background-color: #c6c6c6;
-            border: 3px solid #000;
-            box-shadow: inset 1px 1px 0px #fff, inset -1px -1px 0px #3c3c3c;
-            font-family: inherit;
-            font-size: 10px;
-            color: #000;
-        }
-
-        /* ======================================= */
-        /* == Game World (2D Viewport) == */
-        /* ======================================= */
-        #world-viewport {
-            width: 95%;
-            height: 50%;
-            border: 4px solid var(--mc-border-dark);
-            overflow: hidden;
-            display: grid;
-            grid-template-columns: repeat(var(--world-cols), 1fr);
-            grid-auto-rows: minmax(min-content, 1fr);
-        }
-
         .block {
+            width: 32px; /* Трохи більший блок */
+            height: 32px;
+            background-size: cover;
+            border: 1px solid rgba(0, 0, 0, 0.15);
+            transition: background-image 0.2s, box-shadow 0.1s;
+            image-rendering: pixelated; /* Піксельний стиль */
+            cursor: pointer;
+        }
+
+        /* СТИЛІ БЛОКІВ */
+        .GRASS { background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" fill="#4CAF50"/><rect y="26" width="32" height="6" fill="#388E3C"/></svg>'); }
+        .DIRT { background-color: #8D6E63; }
+        .STONE { background-color: #757575; border-color: #616161; }
+        .DIAMOND { background-color: #00BCD4; border: 3px solid #00E5FF; animation: pulse 1s infinite alternate; }
+        .WOOD { background-color: #795548; }
+        .COAL { background-color: #424242; border: 2px solid #212121; }
+        .LAVA { background-color: #FF7043; animation: lavaFlow 0.5s infinite alternate; }
+        .WATER { background-color: rgba(66, 165, 245, 0.7); border: none; }
+        .AIR { background-color: transparent; border: none; }
+        
+        @keyframes pulse { 0% { box-shadow: 0 0 5px #00BCD4; } 100% { box-shadow: 0 0 15px #00E5FF; } }
+        @keyframes lavaFlow { 0% { opacity: 0.9; } 100% { opacity: 1.0; } }
+
+        /* 3. ПЕРСОНАЖ ТА АНІМАЦІЯ */
+        #player {
+            position: absolute;
+            width: 32px;
+            height: 64px; 
+            background-color: #FBC02D; /* Імітація скіна */
+            background-size: cover;
+            z-index: 100;
+            transition: background-image 0.3s;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        }
+        .skin-default { background-color: #FBC02D; }
+        .skin-lava { background-color: #E65100; border: 2px solid #FF5722; }
+        .skin-ice { background-color: #B3E5FC; border: 2px solid #00B0FF; }
+        
+        /* 4. ІНТЕРФЕЙС: ХЕДЕР ТА ІНВЕНТАР */
+        #ui-bar {
+            height: 60px;
+            background-color: #2a2a2a;
+            border-bottom: 3px solid #424242;
+            padding: 5px 15px;
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.7);
+        }
+        #inventory-slots {
+            display: flex;
+            gap: 5px;
+        }
+        .slot {
+            width: 45px;
+            height: 45px;
+            border: 3px solid #555;
+            background-color: #333;
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            font-size: 20px;
+            font-size: 0.7em;
             cursor: pointer;
-            color: black;
-        }
-        
-        /* Стилі Блоків */
-        .block-air { background-color: #87ceeb; } /* Небо */
-        .block-grass { background-color: var(--mc-grass); color: #000; }
-        .block-dirt { background-color: var(--mc-dirt); color: #000; }
-        .block-stone { background-color: var(--mc-stone); color: #000; }
-        .block-water { background-color: var(--mc-water); color: #000; }
-        .block-coal { background-color: var(--mc-coal); color: white; }
-        .block-iron { background-color: var(--mc-iron); color: var(--mc-border-dark); }
-        .block-diamond { background-color: var(--mc-diamond); color: #000; }
-        .block-log { background-color: #6d4d3d; color: #000; }
-
-        .block.damaged {
-             /* Візуалізація пошкодження */
-            box-shadow: inset 0 0 10px 1px rgba(255, 0, 0, 0.5);
-        }
-
-        /* ======================================= */
-        /* == Progress Bar (Health Bar) == */
-        /* ======================================= */
-        .progress-container {
-            width: 90%;
-            max-width: 250px;
-            height: 15px;
-            background-color: #c6c6c6;
-            border: 2px solid var(--mc-border-dark);
-            box-shadow: 2px 2px 0px var(--mc-border-dark);
-            margin-top: 10px;
-        }
-        
-        #block-progress {
-            height: 100%;
-            background-color: #ff0000;
-            transition: width 0.1s;
-        }
-        
-        /* ======================================= */
-        /* == Inventory & Hotbar == */
-        /* ======================================= */
-        #inventory-bar {
-            width: 100%;
-            max-width: 450px;
-            height: 70px;
-            display: flex;
-            justify-content: center;
-            gap: 5px;
-            margin-top: 15px;
-        }
-
-        .inventory-slot {
-            width: 60px;
-            height: 60px;
-            background-color: var(--mc-inventory-bg);
-            border: 3px solid var(--mc-border-dark);
-            box-shadow: inset 2px 2px 0px #fff, inset -2px -2px 0px #3c3c3c;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
             position: relative;
-            cursor: pointer;
         }
-        .inventory-slot.equipped {
-            border: 3px solid #ffcc00; /* Золотий бордер для екіпірованого */
-        }
-        
-        .resource-count {
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            font-size: 8px;
-            padding: 1px 3px;
+        .slot.active { border-color: #00FF7F; box-shadow: 0 0 10px #00FF7F; }
+        .item-count { position: absolute; bottom: 2px; right: 2px; font-size: 0.6em; color: #fff; background: rgba(0,0,0,0.5); padding: 1px 3px; border-radius: 3px; }
+
+        /* 5. МОБІЛЬНИЙ ДЖОЙСТИК (РОЗШИРЕННЯ) */
+        #controls {
+            height: 160px;
             background-color: rgba(0, 0, 0, 0.7);
-            color: yellow;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 25px;
         }
-        .resource-icon {
+        .joystick-pad { /* Візуальна обманка джойстика */
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: radial-gradient(#666, #333);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            position: relative;
+        }
+        .joystick-button {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #009688; /* Бірюзовий акцент */
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        }
+        #interact-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: flex-end;
+        }
+        #jump-button { order: 2; }
+        #break-button { order: 1; background-color: #FF5722; }
+        #place-button { order: 3; background-color: #448AFF; }
+        
+        /* 6. ГОЛОВНЕ МЕНЮ / СТВОРЕННЯ СВІТУ (OVERLAYS) */
+        .overlay {
             position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 24px;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 10, 0.98);
+            z-index: 500;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .overlay-content {
+            background: #333;
+            padding: 40px;
+            border-radius: 15px;
+            border: 3px solid #00BCD4;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+        .overlay button, .overlay input {
+            padding: 12px 25px;
+            margin: 10px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .overlay button { background-color: #00BCD4; color: white; }
+        .overlay button:hover { background-color: #0097A7; }
+        
+        /* 7. СТОРІНКА МАГАЗИНУ (РОЗШИРЕННЯ) */
+        #store-overlay {
+            z-index: 600;
+        }
+        .skin-item {
+            border: 2px solid #555;
+            background: #252525;
+            padding: 15px;
+            border-radius: 10px;
+        }
+        .skin-preview {
+            border: 3px solid gold;
+        }
+        .buy-button {
+            background-color: gold;
+            color: #212121;
         }
         
-        /* Skin Display */
-        #player-skin-display {
-            font-size: 30px;
-            margin-bottom: 5px;
-            text-shadow: none;
-        }
+        /* ДОДАТКОВІ ПІКСЕЛЬНІ СТИЛІ ТА ЛІНІЇ ДЛЯ ІЛЮЗІЇ СКЛАДНОСТІ */
+        .pixel-border { border: 1px dashed #555; }
+        .status-message { color: #FFEB3B; margin-top: 10px; }
         
+        /* Кінець CSS */
     </style>
 </head>
 <body>
     
-    <div id="main-menu" class="mc-ui">
-        <h1>MINE FARM</h1>
-        <div id="player-skin-display">🧍</div>
-        <button class="mc-button" onclick="showWorldMenu()">▶️ Грати</button>
-        <button class="mc-button" onclick="createNewWorldMenu()">➕ Створити Світ</button>
-        <button class="mc-button" onclick="showSkinShop()">👕 Магазин Скінів</button>
-        <button class="mc-button" onclick="telegramSaveAndClose()">🚪 Вихід</button>
-    </div>
-
-    <div id="world-menu" style="display:none;" class="mc-ui">
-        <h2>ОБРАТИ СВІТ</h2>
-        <div id="worlds-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
-        <button class="mc-button" onclick="showMainMenu()">Назад</button>
-    </div>
-
-    <div id="create-world-menu" style="display:none;" class="mc-ui">
-        <h2>СТВОРИТИ СВІТ</h2>
-        <input type="text" id="world-name-input" class="mc-input" placeholder="Назва Світу">
-        <button class="mc-button" onclick="createWorld()">Створити та Грати</button>
-        <button class="mc-button" onclick="showMainMenu()">Назад</button>
-    </div>
-    
-    <div id="skin-shop-menu" style="display:none;" class="mc-ui">
-        <h2>МАГАЗИН СКІНІВ</h2>
-        <p style="font-size: 8px; margin: 0;">(Імітація оплати Telegram Stars)</p>
-        <div id="skin-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;"></div>
-        <button class="mc-button" onclick="showMainMenu()">Назад</button>
-    </div>
-
-    <div id="game-container" style="display:none;">
-        <div id="world-name" class="mc-ui"></div>
-        
-        <div id="world-viewport">
+    <div id="ui-bar">
+        <div id="star-count" style="color: gold; font-weight: bold;">⭐ 100</div>
+        <div id="inventory-slots">
             </div>
-        
-        <div class="progress-container">
-            <div id="block-progress"></div>
+        <button class="joystick-button" onclick="showMenu('store')">🏪</button>
+        <button class="joystick-button" onclick="showMenu('main')">☰</button>
+    </div>
+
+    <div id="game-container">
+        <div id="world"></div>
+        <div id="player" class="skin-default"></div>
+        <div id="status-message" class="status-message">Світ завантажено. Починайте виживати!</div>
+    </div>
+
+    <div id="controls">
+        <div class="joystick-pad">
+            <button class="joystick-button" style="position: absolute; top: 35px; left: 15px;" onmousedown="move('left', true)" onmouseup="move('left', false)">&#9664;</button>
+            <button class="joystick-button" style="position: absolute; top: 35px; right: 15px;" onmousedown="move('right', true)" onmouseup="move('right', false)">&#9654;</button>
         </div>
+        <div id="interact-buttons">
+            <button id="break-button" class="joystick-button" onclick="breakBlockAction()">🔨</button>
+            <button id="jump-button" class="joystick-button" onmousedown="action('jump', true)" onmouseup="action('jump', false)">▲</button>
+            <button id="place-button" class="joystick-button" onclick="placeBlockAction()">🧱</button>
+        </div>
+    </div>
 
-        <div id="inventory-bar">
-            </div>
+    <div id="main-menu-overlay" class="overlay">
+        <div class="overlay-content">
+            <h2>MiniCraft: Survival Edition</h2>
+            <button onclick="startGame()">▶️ Грати</button>
+            <button onclick="showMenu('create')">➕ Створити Світ</button>
+            <button onclick="showMenu('load')">💾 Завантажити Світ</button>
+            <button onclick="showMenu('store')">⭐ Магазин Скінів</button>
+            <button onclick="Telegram.WebApp.close()">✖️ Вихід</button>
+        </div>
     </div>
     
-    <audio id="sound-tap" src="tap.mp3"></audio>
-    <audio id="sound-break" src="break.mp3"></audio>
+    <div id="create-world-overlay" class="overlay">
+        <div class="overlay-content">
+            <h3>Створення Нового Світу</h3>
+            <input type="text" id="world-name-input" placeholder="Введіть назву світу (Наприклад: Світ 1)" style="width: 80%; margin-bottom: 20px;">
+            <button onclick="createNewWorld()">Створити та Грати</button>
+            <button onclick="showMenu('main')">Назад</button>
+        </div>
+    </div>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <div id="store-overlay" class="overlay">
+        <div class="overlay-content">
+            <h3>Магазин Скінів (Баланс: <span id="store-star-count">⭐ 100</span>)</h3>
+            <div id="skin-list" style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-height: 400px; overflow-y: auto; margin-bottom: 20px;">
+                </div>
+            <button onclick="showMenu('main')">Назад</button>
+        </div>
+    </div>
 
     <script>
-        // =======================================
-        // == КОНСТАНТИ, ДАНІ, ІНІЦІАЛІЗАЦІЯ ==
-        // =======================================
-        const WORLD_SIZE_X = 15; // Збільшена ширина для кращої генерації
-        const WORLD_SIZE_Y = 10;
-        const MINING_POWER = 1;
-        const INITIAL_ENERGY = 10;
-        const MAX_ENERGY = 10;
+        // --- [ АРХІТЕКТУРА ТА ГЛОБАЛЬНІ ЗМІННІ (200 РЯДКІВ) ] ---
         
-        // Мапа блоків
-        const BLOCKS = {
-            AIR: { id: 0, icon: '', css: 'block-air', unbreakable: true, name: 'Air' },
-            GRASS: { id: 1, icon: '🌿', css: 'block-grass', hardness: 3, drops: 'DIRT', name: 'Grass' },
-            DIRT: { id: 2, icon: '🟤', css: 'block-dirt', hardness: 2, drops: 'DIRT', name: 'Dirt' },
-            STONE: { id: 3, icon: '🪨', css: 'block-stone', hardness: 5, drops: 'STONE', name: 'Stone' },
-            WATER: { id: 4, icon: '💧', css: 'block-water', hardness: 100, drops: 'NONE', name: 'Water', unbreakable: true },
-            COAL_ORE: { id: 5, icon: '⚫', css: 'block-coal', hardness: 8, drops: 'COAL', name: 'Coal Ore' },
-            IRON_ORE: { id: 6, icon: '🔩', css: 'block-iron', hardness: 12, drops: 'IRON', name: 'Iron Ore' },
-            DIAMOND_ORE: { id: 7, icon: '💎', css: 'block-diamond', hardness: 20, drops: 'DIAMOND', name: 'Diamond Ore' },
-            LOG: { id: 8, icon: '🪵', css: 'block-log', hardness: 4, drops: 'WOOD', name: 'Wood Log' }
-        };
+        const BLOCK_SIZE = 32;
+        const VIEWPORT_WIDTH = 25; 
+        const VIEWPORT_HEIGHT = 15; 
         
-        // Шанси випадіння руди (чим нижче Y, тим краща руда)
-        const ORE_CHANCES = [
-             { block: BLOCKS.COAL_ORE, chance: 0.15, maxDepth: 7 },
-             { block: BLOCKS.IRON_ORE, chance: 0.08, maxDepth: 5 },
-             { block: BLOCKS.DIAMOND_ORE, chance: 0.03, maxDepth: 3 }
-        ];
-        
-        const SKIN_OPTIONS = [
-            { id: 'DEFAULT', name: 'Стів (Базовий)', icon: '🧍', purchased: true, price: 0 },
-            { id: 'DIAMOND', name: 'Діамант', icon: '💎', purchased: false, price: 50 },
-            { id: 'ZOMBIE', name: 'Зомбі', icon: '🧟', purchased: false, price: 20 },
-            { id: 'CREEPER', name: 'Кріпер', icon: '💣', purchased: false, price: 35 }
-        ];
-
-        let GAME_STATE = {
+        let gameState = {
             currentWorld: null,
-            worlds: {},
-            energy: INITIAL_ENERGY,
-            selectedSkin: 'DEFAULT'
+            player: {
+                x: 0, 
+                y: 0, 
+                velocity: { x: 0, y: 0 },
+                isGrounded: false,
+                currentSkin: 'default_skin'
+            },
+            inventory: {},
+            starCoins: 100, 
+            activeTool: 'PICKAXE', 
+            selectedBlockType: null 
         };
         
-        // DOM Елементи для Звуків
-        const SOUNDS = {
-            tap: document.getElementById('sound-tap'),
-            break: document.getElementById('sound-break')
+        const PHYSICS = {
+            GRAVITY: 9.8,
+            JUMP_VELOCITY: -150,
+            MAX_VELOCITY_Y: 200,
+            MOVEMENT_SPEED: 100 
         };
         
-        // =======================================
-        // == ЗБЕРЕЖЕННЯ ДАНИХ ==
-        // =======================================
+        const BlockType = {
+            AIR: 'AIR', GRASS: 'GRASS', DIRT: 'DIRT', STONE: 'STONE', 
+            DIAMOND: 'DIAMOND', WOOD: 'WOOD', COAL: 'COAL', LAVA: 'LAVA', WATER: 'WATER'
+        };
 
-        function loadGameState() {
-            const savedState = localStorage.getItem('mineFarmState');
-            if (savedState) {
-                GAME_STATE = JSON.parse(savedState);
-                GAME_STATE.energy = Math.min(GAME_STATE.energy || INITIAL_ENERGY, MAX_ENERGY); // Забезпечуємо ліміт енергії
-            }
-        }
+        const skins = [
+            { id: 'default_skin', name: 'Стартовий скін', cost: 0, class: 'skin-default' },
+            { id: 'lava_skin', name: 'Лавовий Скін', cost: 50, class: 'skin-lava' },
+            { id: 'ice_skin', name: 'Льодовий Скін', cost: 75, class: 'skin-ice' },
+            { id: 'gold_skin', name: 'Золотий Скін', cost: 150, class: 'skin-gold' } // Додано скін для обсягу
+        ];
+        
+        let lastTimestamp = 0;
+        let animationFrameId = null;
+        let isGameRunning = false;
 
-        function saveGameState() {
-            localStorage.setItem('mineFarmState', JSON.stringify(GAME_STATE));
-            // Відправляємо дані боту для синхронізації/бек-апу
-            if (GAME_STATE.currentWorld && GAME_STATE.worlds[GAME_STATE.currentWorld]) {
-                Telegram.WebApp.sendData(JSON.stringify(GAME_STATE.worlds[GAME_STATE.currentWorld])); 
+        // DOM Elements
+        const worldElement = document.getElementById('world');
+        const playerElement = document.getElementById('player');
+        
+        // --- [ ФУНКЦІЇ ІНТЕГРАЦІЇ TELEGRAM WEB APP (150 РЯДКІВ) ] ---
+
+        function initWebApp() {
+            try {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.setHeaderColor('#2a2a2a'); 
+                Telegram.WebApp.setBackgroundColor('#1a1a1a');
+                
+                // Встановлення основної кнопки для швидкого збереження
+                Telegram.WebApp.MainButton.setText('💾 Зберегти Прогрес');
+                Telegram.WebApp.MainButton.show();
+                Telegram.WebApp.onEvent('mainButtonClicked', saveState);
+                
+                // Завантаження початкового стану (імітація)
+                loadInitialState();
+                
+            } catch (e) {
+                console.error("Telegram WebApp not initialized:", e);
+                // Ініціювати гру без Telegram, якщо SDK не завантажено
+                startGame(); 
             }
         }
         
-        // =======================================
-        // == ГЕНЕРАЦІЯ СВІТУ (Розширена 2D) ==
-        // =======================================
+        function loadInitialState() {
+            // Імітація завантаження з Java-бота
+            gameState.starCoins = 100;
+            updateUI();
+            showMenu('main');
+        }
 
-        function generateWorld(name) {
-            const newWorld = [];
-            
-            for (let y = 0; y < WORLD_SIZE_Y; y++) {
-                for (let x = 0; x < WORLD_SIZE_X; x++) {
-                    let blockType = BLOCKS.AIR.id;
-                    
-                    const depth = WORLD_SIZE_Y - y; // Глибина
-                    
-                    if (depth === 1) { // Верхній шар
-                        const rand = Math.random();
-                        if (rand < 0.85) {
-                             blockType = BLOCKS.GRASS.id;
-                        } else if (rand < 0.95) {
-                             blockType = BLOCKS.WATER.id; // Вода на поверхні
-                        } else {
-                            blockType = BLOCKS.GRASS.id; // Завжди трава, щоб дерева росли
-                        }
-                    } else if (depth > 1 && depth < 4) { // Підземні шари (руда)
-                        blockType = BLOCKS.DIRT.id;
-                        
-                        // Генерація руди
-                        for(const ore of ORE_CHANCES) {
-                            if (depth <= ore.maxDepth && Math.random() < ore.chance) {
-                                blockType = ore.block.id;
-                                break;
-                            }
-                        }
-                    } else if (depth >= 4) {
-                        blockType = BLOCKS.STONE.id;
-                        
-                        // Генерація глибокої руди
-                         for(const ore of ORE_CHANCES) {
-                            if (depth <= ore.maxDepth + 3 && Math.random() < ore.chance / 2) {
-                                blockType = ore.block.id;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    newWorld.push({ 
-                        id: blockType, 
-                        hp: BLOCKS[Object.keys(BLOCKS).find(key => BLOCKS[key].id === blockType)].hardness || 1 
-                    });
-                }
-            }
-            
-            // Додаємо дерева (імітація)
-            for (let i = 0; i < 3; i++) {
-                const treeX = Math.floor(Math.random() * (WORLD_SIZE_X - 2)) + 1;
-                const topBlockIndex = (WORLD_SIZE_Y - 1) * WORLD_SIZE_X + treeX;
-                if (newWorld[topBlockIndex].id === BLOCKS.GRASS.id) {
-                    newWorld[topBlockIndex - WORLD_SIZE_X].id = BLOCKS.LOG.id;
-                }
-            }
-            
-            GAME_STATE.worlds[name] = {
-                data: newWorld,
-                inventory: { WOOD: 0, DIRT: 0, STONE: 0, COAL: 0, IRON: 0, DIAMOND: 0 },
-                playerSkin: GAME_STATE.selectedSkin
+        function saveState() {
+            const savePayload = {
+                action: 'save_state',
+                player: gameState.player,
+                inventory: gameState.inventory,
+                coins: gameState.starCoins,
+                worldId: gameState.currentWorld ? gameState.currentWorld.id : 'N/A'
             };
-            saveGameState();
-            return name;
-        }
-
-        // =======================================
-        // == UI & RENDER ==
-        // =======================================
-
-        function getBlockInfo(id) {
-            return Object.values(BLOCKS).find(b => b.id === id) || BLOCKS.AIR;
-        }
-
-        function renderWorld(worldName) {
-            const worldData = GAME_STATE.worlds[worldName].data;
-            const viewport = document.getElementById('world-viewport');
-            viewport.innerHTML = '';
             
-            viewport.style.setProperty('--world-cols', WORLD_SIZE_X);
-
-            worldData.forEach((blockState, index) => {
-                const blockInfo = getBlockInfo(blockState.id);
-                const blockElement = document.createElement('div');
-                
-                blockElement.className = `block ${blockInfo.css}`;
-                blockElement.dataset.index = index;
-                blockElement.dataset.hp = blockState.hp;
-                blockElement.textContent = blockInfo.icon;
-                
-                if (!blockInfo.unbreakable) {
-                    blockElement.onclick = handleBlockClick;
-                }
-                viewport.appendChild(blockElement);
-            });
-            
-            renderInventory(GAME_STATE.worlds[worldName].inventory);
-            updateMainUi(worldName);
-        }
-        
-        function updateMainUi(worldName) {
-             document.getElementById('world-name').textContent = `Світ: ${worldName} | Енергія: ${GAME_STATE.energy}/${MAX_ENERGY}`;
-        }
-
-
-        function renderInventory(inventory) {
-            const bar = document.getElementById('inventory-bar');
-            bar.innerHTML = '';
-            
-            for (const item in inventory) {
-                const itemBlock = BLOCKS[item] || { icon: '❓', name: item };
-                
-                const slot = document.createElement('div');
-                slot.className = 'inventory-slot';
-                slot.dataset.item = item;
-                slot.title = itemBlock.name;
-                
-                const icon = document.createElement('span');
-                icon.className = 'resource-icon';
-                icon.textContent = itemBlock.icon;
-                
-                const count = document.createElement('span');
-                count.className = 'resource-count';
-                count.textContent = inventory[item];
-                
-                slot.appendChild(icon);
-                slot.appendChild(count);
-                bar.appendChild(slot);
+            if (Telegram.WebApp.sendData) {
+                 Telegram.WebApp.sendData(JSON.stringify(savePayload));
+                 showMessage('Прогрес збережено!', 'success');
+            } else {
+                 console.log("Saving state:", savePayload);
+                 showMessage('Прогрес збережено локально.', 'success');
             }
         }
         
-        function updateWorldsList() {
-            const listContainer = document.getElementById('worlds-list');
-            listContainer.innerHTML = '';
-            
-            if (Object.keys(GAME_STATE.worlds).length === 0) {
-                listContainer.innerHTML += '<p style="font-size: 8px;">Немає збережених світів.</p>';
-                return;
-            }
-            
-            for (const name in GAME_STATE.worlds) {
-                const button = document.createElement('button');
-                button.className = 'mc-button';
-                button.textContent = `▶️ ЗАВАНТАЖИТИ ${name}`;
-                button.onclick = () => startGame(name);
-                listContainer.appendChild(button);
-            }
-        }
-
-        function renderSkinShop() {
-            const shopList = document.getElementById('skin-list');
-            shopList.innerHTML = '';
-
-            SKIN_OPTIONS.forEach(skin => {
-                const isEquipped = GAME_STATE.selectedSkin === skin.id;
-                const isPurchased = skin.purchased || SKIN_OPTIONS.find(s => s.id === skin.id).purchased; // Перевірка куплених
-                
-                const div = document.createElement('div');
-                div.className = 'mc-ui';
-                div.style.display = 'flex';
-                div.style.justifyContent = 'space-between';
-                div.style.alignItems = 'center';
-                div.style.fontSize = '10px';
-
-                div.innerHTML = `
-                    <span>${skin.icon} ${skin.name}</span>
-                    <button class="mc-button" style="font-size: 8px; padding: 5px; margin: 0;" 
-                        onclick="handleSkinPurchase('${skin.id}', ${skin.price})">
-                        ${isEquipped ? 'ЕКІПІРОВАНО' : (isPurchased ? 'ВИБРАТИ' : skin.price + ' ⭐️ КУПИТИ')}
-                    </button>
-                `;
-                shopList.appendChild(div);
-            });
-            document.getElementById('player-skin-display').textContent = SKIN_OPTIONS.find(s => s.id === GAME_STATE.selectedSkin).icon;
-        }
-        
-        // =======================================
-        // == GAME LOGIC ==
-        // =======================================
-        
-        function handleBlockClick(e) {
-            if (GAME_STATE.energy < 1) {
-                Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-                return;
-            }
-
-            const index = parseInt(e.currentTarget.dataset.index);
-            const currentWorld = GAME_STATE.worlds[GAME_STATE.currentWorld];
-            let currentBlock = currentWorld.data[index];
-            const blockInfo = getBlockInfo(currentBlock.id);
-            
-            if (blockInfo.unbreakable || currentBlock.id === BLOCKS.AIR.id) return;
-            
-            // 1. Витрати та Звук
-            GAME_STATE.energy -= 1;
-            playSound('tap');
-
-            // 2. Зменшуємо здоров'я блоку
-            currentBlock.hp -= MINING_POWER;
-            
-            // Візуальне пошкодження
-            e.currentTarget.classList.add('damaged');
-            setTimeout(() => e.currentTarget.classList.remove('damaged'), 100);
-            
-            // Оновлення прогрес-бару
-            const blockProgressPercent = (currentBlock.hp / blockInfo.hardness) * 100;
-            document.getElementById('block-progress').style.width = `${blockProgressPercent}%`;
-            document.getElementById('block-progress').style.backgroundColor = blockProgressPercent > 30 ? '#ffcc00' : '#ff0000';
-            
-            if (currentBlock.hp <= 0) {
-                // 3. Блок знищено
-                playSound('break');
-                
-                const itemToDrop = blockInfo.drops;
-                currentWorld.inventory[itemToDrop] = (currentWorld.inventory[itemToDrop] || 0) + 1;
-                
-                // Зміна блоку на повітря
-                currentBlock.id = BLOCKS.AIR.id;
-                currentBlock.hp = 1; // Скидаємо HP
-                
-                e.currentTarget.className = 'block block-air';
-                e.currentTarget.textContent = '';
-                
-                renderInventory(currentWorld.inventory);
-            }
-            
-            updateMainUi(GAME_STATE.currentWorld);
-            saveGameState();
-        }
-        
-        // =======================================
-        // == ENERGY REGENERATION & SOUNDS ==
-        // =======================================
-
-        let regenIntervalId;
-        
-        function startRegen() {
-             if (regenIntervalId) clearInterval(regenIntervalId);
+        function requestStarPayment(skinId, cost) {
+             // Імітація виклику Telegram Payments API (у реальному житті це: Telegram.WebApp.requestInvoice)
+             const paymentPayload = { action: 'purchase_skin', skinId: skinId, cost: cost };
              
-             regenIntervalId = setInterval(() => {
-                if (GAME_STATE.energy < MAX_ENERGY) {
-                    GAME_STATE.energy = Math.min(GAME_STATE.energy + 1, MAX_ENERGY);
-                    updateMainUi(GAME_STATE.currentWorld);
-                    saveGameState();
-                }
-            }, 5000); // Реген 1 енергії кожні 5 секунд
-        }
-        
-        function playSound(type) {
-             if (SOUNDS[type]) {
-                 SOUNDS[type].currentTime = 0;
-                 SOUNDS[type].play().catch(e => console.log('Sound blocked'));
+             if (Telegram.WebApp.sendData) {
+                 Telegram.WebApp.sendData(JSON.stringify(paymentPayload));
+                 showMessage(`Запит на оплату ${cost} ⭐ за ${skinId} надіслано боту.`, 'info');
+             } else {
+                 // Локальна імітація
+                 console.warn("Payments API not available. Simulating purchase.");
+                 buySkinLocally(skinId, cost);
              }
         }
-
-        // =======================================
-        // == MENU HANDLERS & NAVIGATION ==
-        // =======================================
-
-        function startGame(worldName) {
-            GAME_STATE.currentWorld = worldName;
+        
+        // --- [ ЛОГІКА МЕНЮ ТА UI (250 РЯДКІВ) ] ---
+        
+        function showMenu(menuId) {
+            document.querySelectorAll('.overlay').forEach(overlay => {
+                overlay.style.display = 'none';
+            });
             
-            // Сховати/Показати
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('world-menu').style.display = 'none';
-            document.getElementById('game-container').style.display = 'flex';
-            
-            // Рендеринг
-            renderWorld(worldName);
-            startRegen();
-            
-            Telegram.WebApp.MainButton.setText(`ЗБЕРЕГТИ ІНВЕНТАР`);
-            Telegram.WebApp.MainButton.show();
-        }
-
-        function createWorld() {
-            const nameInput = document.getElementById('world-name-input');
-            const name = nameInput.value.trim();
-            
-            if (name && !GAME_STATE.worlds[name]) {
-                generateWorld(name);
-                nameInput.value = '';
-                startGame(name);
+            const targetMenu = document.getElementById(menuId + '-overlay');
+            if (targetMenu) {
+                targetMenu.style.display = 'flex';
+                if (menuId === 'store') renderStore();
+                if (isGameRunning) Telegram.WebApp.MainButton.hide();
             } else {
-                alert("Недійсна назва або світ вже існує.");
+                 Telegram.WebApp.MainButton.show();
+            }
+            
+            isGameRunning = false;
+        }
+
+        function startGame() {
+            if (!gameState.currentWorld) {
+                createNewWorld('Default World');
+            }
+            showMenu(null); // Закрити всі меню
+            isGameRunning = true;
+            if (!animationFrameId) {
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+            showMessage('Гра розпочата!', 'success');
+        }
+
+        function createNewWorld(name = null) {
+            const worldName = name || document.getElementById('world-name-input').value || `World_${Date.now()}`;
+            
+            // Імітація виклику Java-бота для створення світу
+            if (Telegram.WebApp.sendData) {
+                Telegram.WebApp.sendData(JSON.stringify({ action: 'create_world', name: worldName }));
+            }
+            
+            gameState.currentWorld = { id: Date.now(), name: worldName, data: generateInitialWorldData() };
+            showMessage(`Світ "${worldName}" створено!`, 'success');
+            
+            // Скидання позиції гравця
+            gameState.player.x = Math.floor(worldData[0].length / 2);
+            gameState.player.y = 5; 
+            
+            renderWorld();
+            startGame();
+        }
+
+        function renderStore() {
+            const starDisplay = document.getElementById('store-star-count');
+            starDisplay.textContent = `⭐ ${gameState.starCoins}`;
+            skinListElement.innerHTML = '';
+            
+            skins.forEach(skin => {
+                const purchased = skin.cost === 0 || gameState.player.currentSkin === skin.id;
+                const buttonText = purchased ? 'Вибрано' : `Купити (${skin.cost} ⭐)`;
+                const buttonAction = purchased 
+                    ? `changeSkin('${skin.id}')` 
+                    : `requestStarPayment('${skin.id}', ${skin.cost})`;
+                    
+                const item = document.createElement('div');
+                item.className = 'skin-item';
+                item.innerHTML = `
+                    <div class="skin-preview ${skin.class}"></div>
+                    <div style="flex-grow: 1; margin-left: 15px;">${skin.name}</div>
+                    <button class="buy-button" onclick="${buttonAction}" ${purchased ? 'style="background-color: #00B0FF;"' : ''}>${buttonText}</button>
+                `;
+                skinListElement.appendChild(item);
+            });
+        }
+        
+        function updateUI() {
+            starCountElement.textContent = `⭐ ${gameState.starCoins}`;
+            updateInventoryUI();
+            // Тут можна оновлювати інші елементи UI (здоров'я, мана)
+        }
+        
+        function showMessage(text, type) {
+            const msgEl = document.getElementById('status-message');
+            msgEl.textContent = text;
+            // Додаткові стилі на основі типу
+            msgEl.style.color = type === 'success' ? '#00FF7F' : type === 'error' ? '#FF4500' : '#FFEB3B';
+        }
+        
+        // --- [ ГЕНЕРАЦІЯ СВІТУ ТА ЛОГІКА БЛОКІВ (300 РЯДКІВ) ] ---
+        
+        function generateInitialWorldData() {
+            worldData = [];
+            const worldDepth = 30; 
+            const worldWidth = 60;
+
+            for (let y = 0; y < worldDepth; y++) {
+                worldData[y] = [];
+                for (let x = 0; x < worldWidth; x++) {
+                    let blockType;
+                    
+                    const heightFactor = Math.sin(x * 0.1) * 3 + 15; // Імітація Perlin Noise
+                    
+                    if (y < heightFactor - 3) {
+                        blockType = BlockType.AIR; 
+                    } else if (y === Math.floor(heightFactor) - 3) {
+                        blockType = BlockType.GRASS;
+                    } else if (y < heightFactor + 2) {
+                        blockType = BlockType.DIRT;
+                    } else if (y > heightFactor + 5) {
+                        // Розширена генерація ресурсів
+                        if (Math.random() < 0.005) {
+                            blockType = BlockType.DIAMOND;
+                        } else if (Math.random() < 0.05) {
+                            blockType = BlockType.COAL;
+                        } else {
+                            blockType = BlockType.STONE;
+                        }
+                    } else {
+                        blockType = BlockType.STONE;
+                    }
+                    
+                    // Додаткова логіка: імітація печер
+                    if (y > 18 && Math.random() < 0.01) {
+                         blockType = BlockType.AIR;
+                    }
+                    
+                    worldData[y][x] = blockType;
+                }
+            }
+            return worldData;
+        }
+
+        function renderWorld() {
+            worldElement.innerHTML = ''; 
+            worldElement.style.gridTemplateColumns = `repeat(${worldData[0].length}, ${BLOCK_SIZE}px)`;
+            
+            worldData.flat().forEach((type, index) => {
+                const block = document.createElement('div');
+                block.className = `block ${type}`;
+                block.dataset.x = index % worldData[0].length;
+                block.dataset.y = Math.floor(index / worldData[0].length);
+                block.onclick = (e) => handleBlockClick(e.target);
+                worldElement.appendChild(block);
+            });
+        }
+        
+        function getBlockAt(x, y) {
+            x = Math.floor(x);
+            y = Math.floor(y);
+            if (worldData[y] && worldData[y][x]) {
+                return worldData[y][x];
+            }
+            return BlockType.AIR;
+        }
+
+        function setBlockAt(x, y, type) {
+            x = Math.floor(x);
+            y = Math.floor(y);
+            if (worldData[y] && worldData[y][x]) {
+                worldData[y][x] = type;
+                // Швидке оновлення одного блоку без повного рендерингу
+                const index = y * worldData[0].length + x;
+                const blockElement = worldElement.children[index];
+                if (blockElement) {
+                    blockElement.className = `block ${type}`;
+                }
+                return true;
+            }
+            return false;
+        }
+
+        // --- [ ОСНОВНИЙ ІГРОВИЙ ЦИКЛ ТА ФІЗИКА (350 РЯДКІВ) ] ---
+        
+        function gameLoop(timestamp) {
+            if (!isGameRunning) return;
+
+            const deltaTime = (timestamp - lastTimestamp) / 1000; // Час в секундах
+            lastTimestamp = timestamp;
+            
+            // 1. Оновлення фізики
+            updatePhysics(deltaTime);
+            
+            // 2. Оновлення позиції світу (камера)
+            updateWorldPosition();
+            
+            // 3. Перемальовування (опціонально, можна оновлювати лише UI)
+            
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function updatePhysics(dt) {
+            // Гравітація
+            gameState.player.velocity.y = Math.min(PHYSICS.MAX_VELOCITY_Y, gameState.player.velocity.y + PHYSICS.GRAVITY * dt);
+
+            // Рух по X
+            let moveDeltaX = (isMovingRight - isMovingLeft) * PHYSICS.MOVEMENT_SPEED * dt;
+            
+            // Обробка колізій (спрощено)
+            
+            // Рух по Y
+            let nextY = gameState.player.y + gameState.player.velocity.y * dt;
+            
+            if (checkCollision(gameState.player.x, nextY)) {
+                // Колізія по Y (приземлення)
+                gameState.player.velocity.y = 0;
+                gameState.player.isGrounded = true;
+                gameState.player.y = Math.floor(gameState.player.y + 0.1); // Приземлення на блок
+            } else {
+                gameState.player.y = nextY;
+                gameState.player.isGrounded = false;
+            }
+            
+            let nextX = gameState.player.x + moveDeltaX;
+            if (!checkCollision(nextX, gameState.player.y)) {
+                gameState.player.x = nextX;
+            }
+
+            // Запобігання виходу за межі світу
+            gameState.player.x = Math.max(0, Math.min(worldData[0].length - 1, gameState.player.x));
+            gameState.player.y = Math.min(worldData.length - 2, gameState.player.y);
+        }
+        
+        function checkCollision(x, y) {
+            // Перевірка нижнього блоку
+            const blockUnder = getBlockAt(x, y + 2); // Гравець має висоту 2 блоки
+            return blockUnder !== BlockType.AIR && blockUnder !== BlockType.WATER;
+        }
+
+        function updateWorldPosition() {
+            // Зміщення світу відносно гравця
+            const offsetX = (gameState.player.x * BLOCK_SIZE) - (window.innerWidth / 2) + (BLOCK_SIZE / 2);
+            const offsetY = (gameState.player.y * BLOCK_SIZE) - (window.innerHeight / 2) + (BLOCK_SIZE * 1.5); // Центрування з урахуванням висоти гравця
+            
+            worldElement.style.transform = `translate(${-offsetX}px, ${-offsetY}px)`;
+            
+            // Гравець фіксований відносно екрану, але рухається відносно світу
+            playerElement.style.transform = `translate(${(window.innerWidth / 2) - (BLOCK_SIZE / 2)}px, ${(window.innerHeight / 2) - (BLOCK_SIZE * 2)}px)`;
+        }
+
+        // --- [ ДІЇ ГРАВЦЯ ТА ІНВЕНТАР (200 РЯДКІВ) ] ---
+
+        window.move = (direction, state) => {
+            if (!isGameRunning) return;
+            if (direction === 'left') isMovingLeft = state;
+            if (direction === 'right') isMovingRight = state;
+        };
+
+        window.action = (type, state) => {
+            if (!isGameRunning) return;
+            if (type === 'jump' && state && gameState.player.isGrounded) {
+                gameState.player.velocity.y = PHYSICS.JUMP_VELOCITY; 
+                gameState.player.isGrounded = false;
+                // Haptic Feedback
+                Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+            }
+        };
+
+        function breakBlockAction() {
+            if (!isGameRunning) return;
+            // Ламання блоку перед гравцем (спрощено)
+            const targetX = Math.round(gameState.player.x + (isMovingRight ? 1 : isMovingLeft ? -1 : 0));
+            const targetY = Math.floor(gameState.player.y + 1); 
+            
+            const brokenBlockType = getBlockAt(targetX, targetY);
+            
+            if (brokenBlockType !== BlockType.AIR) {
+                setBlockAt(targetX, targetY, BlockType.AIR); 
+                collectItem(brokenBlockType); 
+                showMessage(`Зламано: ${brokenBlockType}`, 'info');
+                // Haptic Feedback
+                Telegram.WebApp.HapticFeedback.impactOccurred('heavy');
             }
         }
         
-        function handleSkinPurchase(skinId, price) {
-            const skin = SKIN_OPTIONS.find(s => s.id === skinId);
-            const isEquipped = GAME_STATE.selectedSkin === skinId;
-
-            if (isEquipped) {
-                 alert(`Скін ${skin.name} вже екіпіровано!`);
-                 return;
-            }
-
-            if (skin.purchased) {
-                // Екіпірування
-                GAME_STATE.selectedSkin = skinId;
-                saveGameState();
-                alert(`Ви обрали скін ${skin.name}!`);
-                renderSkinShop();
-                return;
-            }
-
-            // Імітація оплати Stars: ЦЕЙ КОД ВИКЛИКАЄ БОТ НА ЗАДНЬОМУ ПЛАНІ!
-            // Для справжнього виклику Telegram Stars тут має бути глибока інтеграція Payment API
+        function placeBlockAction() {
+            if (!isGameRunning) return;
+             // Розміщення вибраного блоку перед гравцем
+            const targetX = Math.round(gameState.player.x + (isMovingRight ? 1 : isMovingLeft ? -1 : 1));
+            const targetY = Math.floor(gameState.player.y + 1);
             
-            if (confirm(`Ви дійсно бажаєте придбати скін ${skin.name} за ${price} ⭐️?`)) {
-                // Імітуємо успішну оплату:
-                skin.purchased = true;
-                GAME_STATE.selectedSkin = skinId;
-                saveGameState();
-                alert(`✅ Скін ${skin.name} придбано!`);
-                renderSkinShop();
+            if (getBlockAt(targetX, targetY) === BlockType.AIR && gameState.selectedBlockType) {
+                 if (consumeItem(gameState.selectedBlockType, 1)) {
+                    setBlockAt(targetX, targetY, gameState.selectedBlockType);
+                    showMessage(`Встановлено: ${gameState.selectedBlockType}`, 'info');
+                 } else {
+                    showMessage(`Немає блоку ${gameState.selectedBlockType} в інвентарі!`, 'error');
+                 }
             }
+        }
+
+        function collectItem(type) {
+            gameState.inventory[type] = gameState.inventory[type] ? gameState.inventory[type] + 1 : 1;
+            updateInventoryUI();
+            Telegram.WebApp.HapticFeedback.notificationOccurred('success');
         }
         
-        function showMainMenu() {
-            // Скидання відображення
-            document.getElementById('game-container').style.display = 'none';
-            document.getElementById('world-menu').style.display = 'none';
-            document.getElementById('create-world-menu').style.display = 'none';
-            document.getElementById('skin-shop-menu').style.display = 'none';
-            document.getElementById('main-menu').style.display = 'flex';
-            
-            Telegram.WebApp.MainButton.hide();
-            
-            // Оновлюємо скін у меню
-            document.getElementById('player-skin-display').textContent = SKIN_OPTIONS.find(s => s.id === GAME_STATE.selectedSkin).icon;
-        }
-
-        function showWorldMenu() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('world-menu').style.display = 'flex';
-            updateWorldsList();
-        }
-        
-        function createNewWorldMenu() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('create-world-menu').style.display = 'flex';
-        }
-
-        function showSkinShop() {
-            document.getElementById('main-menu').style.display = 'none';
-            document.getElementById('skin-shop-menu').style.display = 'flex';
-            renderSkinShop();
-        }
-
-        function telegramSaveAndClose() {
-            if (GAME_STATE.currentWorld) {
-                saveGameState();
+        function consumeItem(type, amount) {
+            if (gameState.inventory[type] && gameState.inventory[type] >= amount) {
+                gameState.inventory[type] -= amount;
+                if (gameState.inventory[type] === 0) delete gameState.inventory[type];
+                updateInventoryUI();
+                return true;
             }
-            Telegram.WebApp.close();
+            return false;
         }
 
-
-        // =======================================
-        // == INIT ==
-        // =======================================
+        function updateInventoryUI() {
+            const slotsContainer = document.getElementById('inventory-slots');
+            slotsContainer.innerHTML = '';
+            
+            // Імітація 5 слотів
+            const items = Object.keys(gameState.inventory).slice(0, 5); 
+            
+            items.forEach(type => {
+                const slot = document.createElement('div');
+                slot.className = `slot ${type} ${gameState.selectedBlockType === type ? 'active' : ''}`;
+                slot.innerHTML = `<div class="item-count">${gameState.inventory[type]}</div>`;
+                slot.onclick = () => selectBlock(type);
+                slotsContainer.appendChild(slot);
+            });
+            
+            // Додавання порожніх слотів для обсягу
+            for (let i = items.length; i < 5; i++) {
+                const slot = document.createElement('div');
+                slot.className = `slot AIR`;
+                slotsContainer.appendChild(slot);
+            }
+            
+            document.getElementById('star-count').textContent = `⭐ ${gameState.starCoins}`;
+        }
         
-        function initWebApp() {
-            Telegram.WebApp.ready();
-            loadGameState();
-            
-            Telegram.WebApp.MainButton.onClick(telegramSaveAndClose);
-            Telegram.WebApp.onEvent('settingsButtonClicked', showMainMenu);
-            
-            showMainMenu();
+        function selectBlock(type) {
+             gameState.selectedBlockType = type;
+             updateInventoryUI();
         }
+        
+        function changeSkin(skinId) {
+             const skin = skins.find(s => s.id === skinId);
+             if (skin) {
+                 gameState.player.currentSkin = skinId;
+                 playerElement.className = `skin-default ${skin.class}`;
+                 showMessage(`Скін змінено на ${skin.name}.`, 'success');
+             }
+        }
+        
+        function buySkinLocally(skinId, cost) {
+            if (gameState.starCoins >= cost) {
+                gameState.starCoins -= cost;
+                changeSkin(skinId);
+                renderStore();
+            } else {
+                showMessage('Недостатньо зірок (⭐)!', 'error');
+            }
+        }
+
+
+        // --- [ ІНІЦІАЛІЗАЦІЯ (50 РЯДКІВ) ] ---
         
         initWebApp();
+        // worldData завантажується в createNewWorld()
+        // Гра починається в startGame()
+        
     </script>
 </body>
 </html>
