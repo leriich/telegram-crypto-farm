@@ -2,210 +2,699 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Farm - Tapper</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mine Farm World Builder</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    
     <style>
+        /* ======================================= */
+        /* == Minecraft Theme Variables & Global == */
+        /* ======================================= */
+        :root {
+            --mc-dirt: #855d4d;
+            --mc-grass: #72aa39;
+            --mc-water: #4f80e0;
+            --mc-stone: #a0a0a0;
+            --mc-coal: #3c3c3c;
+            --mc-iron: #c9c9c9;
+            --mc-diamond: #6af7ff;
+            --mc-border-dark: #3c3c3c;
+            --mc-inventory-bg: #8b8b8b;
+            --mc-text-shadow: 2px 2px 0px #000000;
+        }
+
         body {
-            background-color: #121212; /* Дуже темний фон */
-            color: #E0E0E0; /* Світлий текст */
-            font-family: 'Arial', sans-serif;
+            background-color: var(--mc-stone); 
+            color: white;
+            font-family: 'Press Start 2P', cursive;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between;
             height: 100vh;
             margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            user-select: none; /* Забороняємо виділення для кращого клікера */
+            padding: 10px;
+            user-select: none;
+            overflow: hidden;
+            text-shadow: var(--mc-text-shadow);
+            font-size: 10px;
         }
-        #header {
-            width: 100%;
+
+        /* MC Block Style - Рамки та тіні для UI */
+        .mc-ui {
+            border: 2px solid var(--mc-border-dark);
+            box-shadow: 4px 4px 0px var(--mc-border-dark);
+            background-color: var(--mc-inventory-bg);
+            padding: 8px;
+            margin-bottom: 10px;
             text-align: center;
-            font-size: 1.2em;
-            font-weight: bold;
-            color: #00FF7F; /* Яскраво-зелений акцент */
+            width: 90%;
+            max-width: 400px;
         }
-        #coin-display {
-            font-size: 3.5em;
-            font-weight: 900;
-            color: #FFFFFF;
-            text-shadow: 0 0 10px rgba(0, 255, 127, 0.5);
-            margin-bottom: 20px;
-        }
-        #tap-area {
-            position: relative;
-            width: 200px;
-            height: 200px;
+
+        /* MC Кнопки */
+        .mc-button {
+            padding: 12px;
+            background-color: #a0a0a0;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #000;
             cursor: pointer;
-            transition: transform 0.1s;
-            border-radius: 50%;
-            background: radial-gradient(circle, #3a3a3a, #1a1a1a);
-            box-shadow: 0 0 30px rgba(0, 255, 127, 0.8), 0 5px 15px rgba(0,0,0,0.5);
+            transition: all 0.05s;
+            text-shadow: var(--mc-text-shadow);
+        }
+        .mc-button:active {
+            box-shadow: 2px 2px 0px #000;
+            transform: translate(2px, 2px);
+        }
+        
+        /* Загальні меню */
+        #main-menu, #world-menu, #create-world-menu, #skin-shop-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 90%;
+            max-width: 350px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        /* Input Field Style */
+        .mc-input {
+            padding: 10px;
+            background-color: #c6c6c6;
+            border: 3px solid #000;
+            box-shadow: inset 1px 1px 0px #fff, inset -1px -1px 0px #3c3c3c;
+            font-family: inherit;
+            font-size: 10px;
+            color: #000;
+        }
+
+        /* ======================================= */
+        /* == Game World (2D Viewport) == */
+        /* ======================================= */
+        #world-viewport {
+            width: 95%;
+            height: 50%;
+            border: 4px solid var(--mc-border-dark);
+            overflow: hidden;
+            display: grid;
+            grid-template-columns: repeat(var(--world-cols), 1fr);
+            grid-auto-rows: minmax(min-content, 1fr);
+        }
+
+        .block {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 4em;
-            color: #00FF7F;
-            border: 5px solid #00FF7F;
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            font-size: 20px;
+            cursor: pointer;
+            color: black;
         }
-        #tap-area:active {
-            transform: scale(0.95);
+        
+        /* Стилі Блоків */
+        .block-air { background-color: #87ceeb; } /* Небо */
+        .block-grass { background-color: var(--mc-grass); color: #000; }
+        .block-dirt { background-color: var(--mc-dirt); color: #000; }
+        .block-stone { background-color: var(--mc-stone); color: #000; }
+        .block-water { background-color: var(--mc-water); color: #000; }
+        .block-coal { background-color: var(--mc-coal); color: white; }
+        .block-iron { background-color: var(--mc-iron); color: var(--mc-border-dark); }
+        .block-diamond { background-color: var(--mc-diamond); color: #000; }
+        .block-log { background-color: #6d4d3d; color: #000; }
+
+        .block.damaged {
+             /* Візуалізація пошкодження */
+            box-shadow: inset 0 0 10px 1px rgba(255, 0, 0, 0.5);
         }
-        .tap-effect {
-            position: absolute;
-            font-size: 2em;
-            color: yellow;
-            animation: floatUp 1s ease-out forwards;
-            pointer-events: none;
-            opacity: 0;
-        }
-        @keyframes floatUp {
-            0% { transform: translateY(0); opacity: 1; }
-            100% { transform: translateY(-50px); opacity: 0; }
-        }
-        #stats {
+
+        /* ======================================= */
+        /* == Progress Bar (Health Bar) == */
+        /* ======================================= */
+        .progress-container {
             width: 90%;
-            padding: 10px;
-            background-color: #252525;
-            border-radius: 10px;
-            text-align: left;
-            margin-top: 20px;
-            border: 1px solid #3a3a3a;
+            max-width: 250px;
+            height: 15px;
+            background-color: #c6c6c6;
+            border: 2px solid var(--mc-border-dark);
+            box-shadow: 2px 2px 0px var(--mc-border-dark);
+            margin-top: 10px;
         }
-        #stats div {
-            padding: 5px 0;
-            border-bottom: 1px solid #333;
+        
+        #block-progress {
+            height: 100%;
+            background-color: #ff0000;
+            transition: width 0.1s;
         }
-        #stats div:last-child {
-            border-bottom: none;
+        
+        /* ======================================= */
+        /* == Inventory & Hotbar == */
+        /* ======================================= */
+        #inventory-bar {
+            width: 100%;
+            max-width: 450px;
+            height: 70px;
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin-top: 15px;
         }
+
+        .inventory-slot {
+            width: 60px;
+            height: 60px;
+            background-color: var(--mc-inventory-bg);
+            border: 3px solid var(--mc-border-dark);
+            box-shadow: inset 2px 2px 0px #fff, inset -2px -2px 0px #3c3c3c;
+            position: relative;
+            cursor: pointer;
+        }
+        .inventory-slot.equipped {
+            border: 3px solid #ffcc00; /* Золотий бордер для екіпірованого */
+        }
+        
+        .resource-count {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            font-size: 8px;
+            padding: 1px 3px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: yellow;
+        }
+        .resource-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+        }
+        
+        /* Skin Display */
+        #player-skin-display {
+            font-size: 30px;
+            margin-bottom: 5px;
+            text-shadow: none;
+        }
+        
     </style>
 </head>
 <body>
-    <div id="header">
-        Міні-додаток Crypto Farm 💰
+    
+    <div id="main-menu" class="mc-ui">
+        <h1>MINE FARM</h1>
+        <div id="player-skin-display">🧍</div>
+        <button class="mc-button" onclick="showWorldMenu()">▶️ Грати</button>
+        <button class="mc-button" onclick="createNewWorldMenu()">➕ Створити Світ</button>
+        <button class="mc-button" onclick="showSkinShop()">👕 Магазин Скінів</button>
+        <button class="mc-button" onclick="telegramSaveAndClose()">🚪 Вихід</button>
     </div>
 
-    <div id="main-content">
-        <div id="coin-display">0</div>
-        
-        <div id="tap-area">
-            💎
-        </div>
-        
-        <div id="stats">
-            <div>Енергія: <span id="energy">100</span> / 100</div>
-            <div>Фармінг/сек: <span id="passive-rate">0</span></div>
-            <div>Клік за тапом: <span id="tap-power">1</span></div>
-        </div>
+    <div id="world-menu" style="display:none;" class="mc-ui">
+        <h2>ОБРАТИ СВІТ</h2>
+        <div id="worlds-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+        <button class="mc-button" onclick="showMainMenu()">Назад</button>
     </div>
 
-    <div id="footer">
-        <button onclick="Telegram.WebApp.close()" style="background: #FF4500; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 20px;">
-            Закрити Гру
-        </button>
+    <div id="create-world-menu" style="display:none;" class="mc-ui">
+        <h2>СТВОРИТИ СВІТ</h2>
+        <input type="text" id="world-name-input" class="mc-input" placeholder="Назва Світу">
+        <button class="mc-button" onclick="createWorld()">Створити та Грати</button>
+        <button class="mc-button" onclick="showMainMenu()">Назад</button>
     </div>
+    
+    <div id="skin-shop-menu" style="display:none;" class="mc-ui">
+        <h2>МАГАЗИН СКІНІВ</h2>
+        <p style="font-size: 8px; margin: 0;">(Імітація оплати Telegram Stars)</p>
+        <div id="skin-list" style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px;"></div>
+        <button class="mc-button" onclick="showMainMenu()">Назад</button>
+    </div>
+
+    <div id="game-container" style="display:none;">
+        <div id="world-name" class="mc-ui"></div>
+        
+        <div id="world-viewport">
+            </div>
+        
+        <div class="progress-container">
+            <div id="block-progress"></div>
+        </div>
+
+        <div id="inventory-bar">
+            </div>
+    </div>
+    
+    <audio id="sound-tap" src="tap.mp3"></audio>
+    <audio id="sound-break" src="break.mp3"></audio>
 
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
     <script>
-        // Ініціалізація та змінні гри
-        let coins = 0;
-        let energy = 100;
-        const maxEnergy = 100;
-        let tapPower = 1;
-        let passiveRate = 0; // Пасивний фармінг
+        // =======================================
+        // == КОНСТАНТИ, ДАНІ, ІНІЦІАЛІЗАЦІЯ ==
+        // =======================================
+        const WORLD_SIZE_X = 15; // Збільшена ширина для кращої генерації
+        const WORLD_SIZE_Y = 10;
+        const MINING_POWER = 1;
+        const INITIAL_ENERGY = 10;
+        const MAX_ENERGY = 10;
         
-        // DOM елементи
-        const coinDisplay = document.getElementById('coin-display');
-        const tapArea = document.getElementById('tap-area');
-        const energyDisplay = document.getElementById('energy');
-        const passiveRateDisplay = document.getElementById('passive-rate');
-        const tapPowerDisplay = document.getElementById('tap-power');
+        // Мапа блоків
+        const BLOCKS = {
+            AIR: { id: 0, icon: '', css: 'block-air', unbreakable: true, name: 'Air' },
+            GRASS: { id: 1, icon: '🌿', css: 'block-grass', hardness: 3, drops: 'DIRT', name: 'Grass' },
+            DIRT: { id: 2, icon: '🟤', css: 'block-dirt', hardness: 2, drops: 'DIRT', name: 'Dirt' },
+            STONE: { id: 3, icon: '🪨', css: 'block-stone', hardness: 5, drops: 'STONE', name: 'Stone' },
+            WATER: { id: 4, icon: '💧', css: 'block-water', hardness: 100, drops: 'NONE', name: 'Water', unbreakable: true },
+            COAL_ORE: { id: 5, icon: '⚫', css: 'block-coal', hardness: 8, drops: 'COAL', name: 'Coal Ore' },
+            IRON_ORE: { id: 6, icon: '🔩', css: 'block-iron', hardness: 12, drops: 'IRON', name: 'Iron Ore' },
+            DIAMOND_ORE: { id: 7, icon: '💎', css: 'block-diamond', hardness: 20, drops: 'DIAMOND', name: 'Diamond Ore' },
+            LOG: { id: 8, icon: '🪵', css: 'block-log', hardness: 4, drops: 'WOOD', name: 'Wood Log' }
+        };
+        
+        // Шанси випадіння руди (чим нижче Y, тим краща руда)
+        const ORE_CHANCES = [
+             { block: BLOCKS.COAL_ORE, chance: 0.15, maxDepth: 7 },
+             { block: BLOCKS.IRON_ORE, chance: 0.08, maxDepth: 5 },
+             { block: BLOCKS.DIAMOND_ORE, chance: 0.03, maxDepth: 3 }
+        ];
+        
+        const SKIN_OPTIONS = [
+            { id: 'DEFAULT', name: 'Стів (Базовий)', icon: '🧍', purchased: true, price: 0 },
+            { id: 'DIAMOND', name: 'Діамант', icon: '💎', purchased: false, price: 50 },
+            { id: 'ZOMBIE', name: 'Зомбі', icon: '🧟', purchased: false, price: 20 },
+            { id: 'CREEPER', name: 'Кріпер', icon: '💣', purchased: false, price: 35 }
+        ];
 
-        // Оновлення дисплея
-        function updateDisplay() {
-            coinDisplay.textContent = Math.floor(coins).toLocaleString();
-            energyDisplay.textContent = energy;
-            passiveRateDisplay.textContent = passiveRate;
-            tapPowerDisplay.textContent = tapPower;
+        let GAME_STATE = {
+            currentWorld: null,
+            worlds: {},
+            energy: INITIAL_ENERGY,
+            selectedSkin: 'DEFAULT'
+        };
+        
+        // DOM Елементи для Звуків
+        const SOUNDS = {
+            tap: document.getElementById('sound-tap'),
+            break: document.getElementById('sound-break')
+        };
+        
+        // =======================================
+        // == ЗБЕРЕЖЕННЯ ДАНИХ ==
+        // =======================================
+
+        function loadGameState() {
+            const savedState = localStorage.getItem('mineFarmState');
+            if (savedState) {
+                GAME_STATE = JSON.parse(savedState);
+                GAME_STATE.energy = Math.min(GAME_STATE.energy || INITIAL_ENERGY, MAX_ENERGY); // Забезпечуємо ліміт енергії
+            }
         }
 
-        // Логіка тапу
-        tapArea.addEventListener('click', function(event) {
-            if (energy >= 1) {
-                // Додаємо монети
-                coins += tapPower;
-                
-                // Витрачаємо енергію
-                energy -= 1; 
+        function saveGameState() {
+            localStorage.setItem('mineFarmState', JSON.stringify(GAME_STATE));
+            // Відправляємо дані боту для синхронізації/бек-апу
+            if (GAME_STATE.currentWorld && GAME_STATE.worlds[GAME_STATE.currentWorld]) {
+                Telegram.WebApp.sendData(JSON.stringify(GAME_STATE.worlds[GAME_STATE.currentWorld])); 
+            }
+        }
+        
+        // =======================================
+        // == ГЕНЕРАЦІЯ СВІТУ (Розширена 2D) ==
+        // =======================================
 
-                // Візуальний ефект
-                showTapEffect(event.clientX, event.clientY, tapPower);
-                
-                // Оновлюємо дисплей
-                updateDisplay();
-                
-                // Вібруємо, якщо Telegram підтримує
-                if (Telegram.WebApp.initData) {
-                    Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        function generateWorld(name) {
+            const newWorld = [];
+            
+            for (let y = 0; y < WORLD_SIZE_Y; y++) {
+                for (let x = 0; x < WORLD_SIZE_X; x++) {
+                    let blockType = BLOCKS.AIR.id;
+                    
+                    const depth = WORLD_SIZE_Y - y; // Глибина
+                    
+                    if (depth === 1) { // Верхній шар
+                        const rand = Math.random();
+                        if (rand < 0.85) {
+                             blockType = BLOCKS.GRASS.id;
+                        } else if (rand < 0.95) {
+                             blockType = BLOCKS.WATER.id; // Вода на поверхні
+                        } else {
+                            blockType = BLOCKS.GRASS.id; // Завжди трава, щоб дерева росли
+                        }
+                    } else if (depth > 1 && depth < 4) { // Підземні шари (руда)
+                        blockType = BLOCKS.DIRT.id;
+                        
+                        // Генерація руди
+                        for(const ore of ORE_CHANCES) {
+                            if (depth <= ore.maxDepth && Math.random() < ore.chance) {
+                                blockType = ore.block.id;
+                                break;
+                            }
+                        }
+                    } else if (depth >= 4) {
+                        blockType = BLOCKS.STONE.id;
+                        
+                        // Генерація глибокої руди
+                         for(const ore of ORE_CHANCES) {
+                            if (depth <= ore.maxDepth + 3 && Math.random() < ore.chance / 2) {
+                                blockType = ore.block.id;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    newWorld.push({ 
+                        id: blockType, 
+                        hp: BLOCKS[Object.keys(BLOCKS).find(key => BLOCKS[key].id === blockType)].hardness || 1 
+                    });
                 }
-                
-            } else {
-                // Візуальний ефект порожньої енергії
-                tapArea.style.border = '5px solid red';
-                setTimeout(() => tapArea.style.border = '5px solid #00FF7F', 200);
             }
-        });
-
-        // Візуальний ефект додавання монет
-        function showTapEffect(x, y, amount) {
-            const effect = document.createElement('div');
-            effect.className = 'tap-effect';
-            effect.textContent = `+${amount}`;
             
-            // Коригуємо позицію щодо загального вікна
-            const rect = tapArea.getBoundingClientRect();
-            effect.style.left = `${x - rect.left}px`;
-            effect.style.top = `${y - rect.top}px`;
+            // Додаємо дерева (імітація)
+            for (let i = 0; i < 3; i++) {
+                const treeX = Math.floor(Math.random() * (WORLD_SIZE_X - 2)) + 1;
+                const topBlockIndex = (WORLD_SIZE_Y - 1) * WORLD_SIZE_X + treeX;
+                if (newWorld[topBlockIndex].id === BLOCKS.GRASS.id) {
+                    newWorld[topBlockIndex - WORLD_SIZE_X].id = BLOCKS.LOG.id;
+                }
+            }
             
-            tapArea.appendChild(effect);
-            
-            // Видаляємо елемент після анімації
-            setTimeout(() => {
-                effect.remove();
-            }, 1000);
+            GAME_STATE.worlds[name] = {
+                data: newWorld,
+                inventory: { WOOD: 0, DIRT: 0, STONE: 0, COAL: 0, IRON: 0, DIAMOND: 0 },
+                playerSkin: GAME_STATE.selectedSkin
+            };
+            saveGameState();
+            return name;
         }
 
-        // Відновлення енергії та пасивний фармінг
-        setInterval(() => {
-            // Пасивний фармінг
-            coins += passiveRate / 10; // Розбиваємо на 10 частин для плавності
+        // =======================================
+        // == UI & RENDER ==
+        // =======================================
 
-            // Відновлення енергії (повільно)
-            if (energy < maxEnergy) {
-                energy = Math.min(maxEnergy, energy + 1); // Відновлюємо 1 енергію на секунду
-            }
-            updateDisplay();
-        }, 1000);
+        function getBlockInfo(id) {
+            return Object.values(BLOCKS).find(b => b.id === id) || BLOCKS.AIR;
+        }
 
+        function renderWorld(worldName) {
+            const worldData = GAME_STATE.worlds[worldName].data;
+            const viewport = document.getElementById('world-viewport');
+            viewport.innerHTML = '';
+            
+            viewport.style.setProperty('--world-cols', WORLD_SIZE_X);
 
-        // Ініціалізація Telegram WebApp
-        function initWebApp() {
-             Telegram.WebApp.ready();
-             // Встановлюємо тему міні-додатку під темний режим
-             Telegram.WebApp.setHeaderColor('#121212'); 
-             Telegram.WebApp.setBackgroundColor('#121212');
-             // Можна надіслати дані про монети назад в бота, наприклад, при закритті
-             Telegram.WebApp.onEvent('mainButtonClicked', function() {
-                 Telegram.WebApp.sendData(JSON.stringify({ final_coins: Math.floor(coins) }));
-             });
+            worldData.forEach((blockState, index) => {
+                const blockInfo = getBlockInfo(blockState.id);
+                const blockElement = document.createElement('div');
+                
+                blockElement.className = `block ${blockInfo.css}`;
+                blockElement.dataset.index = index;
+                blockElement.dataset.hp = blockState.hp;
+                blockElement.textContent = blockInfo.icon;
+                
+                if (!blockInfo.unbreakable) {
+                    blockElement.onclick = handleBlockClick;
+                }
+                viewport.appendChild(blockElement);
+            });
+            
+            renderInventory(GAME_STATE.worlds[worldName].inventory);
+            updateMainUi(worldName);
         }
         
-        // Запуск
+        function updateMainUi(worldName) {
+             document.getElementById('world-name').textContent = `Світ: ${worldName} | Енергія: ${GAME_STATE.energy}/${MAX_ENERGY}`;
+        }
+
+
+        function renderInventory(inventory) {
+            const bar = document.getElementById('inventory-bar');
+            bar.innerHTML = '';
+            
+            for (const item in inventory) {
+                const itemBlock = BLOCKS[item] || { icon: '❓', name: item };
+                
+                const slot = document.createElement('div');
+                slot.className = 'inventory-slot';
+                slot.dataset.item = item;
+                slot.title = itemBlock.name;
+                
+                const icon = document.createElement('span');
+                icon.className = 'resource-icon';
+                icon.textContent = itemBlock.icon;
+                
+                const count = document.createElement('span');
+                count.className = 'resource-count';
+                count.textContent = inventory[item];
+                
+                slot.appendChild(icon);
+                slot.appendChild(count);
+                bar.appendChild(slot);
+            }
+        }
+        
+        function updateWorldsList() {
+            const listContainer = document.getElementById('worlds-list');
+            listContainer.innerHTML = '';
+            
+            if (Object.keys(GAME_STATE.worlds).length === 0) {
+                listContainer.innerHTML += '<p style="font-size: 8px;">Немає збережених світів.</p>';
+                return;
+            }
+            
+            for (const name in GAME_STATE.worlds) {
+                const button = document.createElement('button');
+                button.className = 'mc-button';
+                button.textContent = `▶️ ЗАВАНТАЖИТИ ${name}`;
+                button.onclick = () => startGame(name);
+                listContainer.appendChild(button);
+            }
+        }
+
+        function renderSkinShop() {
+            const shopList = document.getElementById('skin-list');
+            shopList.innerHTML = '';
+
+            SKIN_OPTIONS.forEach(skin => {
+                const isEquipped = GAME_STATE.selectedSkin === skin.id;
+                const isPurchased = skin.purchased || SKIN_OPTIONS.find(s => s.id === skin.id).purchased; // Перевірка куплених
+                
+                const div = document.createElement('div');
+                div.className = 'mc-ui';
+                div.style.display = 'flex';
+                div.style.justifyContent = 'space-between';
+                div.style.alignItems = 'center';
+                div.style.fontSize = '10px';
+
+                div.innerHTML = `
+                    <span>${skin.icon} ${skin.name}</span>
+                    <button class="mc-button" style="font-size: 8px; padding: 5px; margin: 0;" 
+                        onclick="handleSkinPurchase('${skin.id}', ${skin.price})">
+                        ${isEquipped ? 'ЕКІПІРОВАНО' : (isPurchased ? 'ВИБРАТИ' : skin.price + ' ⭐️ КУПИТИ')}
+                    </button>
+                `;
+                shopList.appendChild(div);
+            });
+            document.getElementById('player-skin-display').textContent = SKIN_OPTIONS.find(s => s.id === GAME_STATE.selectedSkin).icon;
+        }
+        
+        // =======================================
+        // == GAME LOGIC ==
+        // =======================================
+        
+        function handleBlockClick(e) {
+            if (GAME_STATE.energy < 1) {
+                Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                return;
+            }
+
+            const index = parseInt(e.currentTarget.dataset.index);
+            const currentWorld = GAME_STATE.worlds[GAME_STATE.currentWorld];
+            let currentBlock = currentWorld.data[index];
+            const blockInfo = getBlockInfo(currentBlock.id);
+            
+            if (blockInfo.unbreakable || currentBlock.id === BLOCKS.AIR.id) return;
+            
+            // 1. Витрати та Звук
+            GAME_STATE.energy -= 1;
+            playSound('tap');
+
+            // 2. Зменшуємо здоров'я блоку
+            currentBlock.hp -= MINING_POWER;
+            
+            // Візуальне пошкодження
+            e.currentTarget.classList.add('damaged');
+            setTimeout(() => e.currentTarget.classList.remove('damaged'), 100);
+            
+            // Оновлення прогрес-бару
+            const blockProgressPercent = (currentBlock.hp / blockInfo.hardness) * 100;
+            document.getElementById('block-progress').style.width = `${blockProgressPercent}%`;
+            document.getElementById('block-progress').style.backgroundColor = blockProgressPercent > 30 ? '#ffcc00' : '#ff0000';
+            
+            if (currentBlock.hp <= 0) {
+                // 3. Блок знищено
+                playSound('break');
+                
+                const itemToDrop = blockInfo.drops;
+                currentWorld.inventory[itemToDrop] = (currentWorld.inventory[itemToDrop] || 0) + 1;
+                
+                // Зміна блоку на повітря
+                currentBlock.id = BLOCKS.AIR.id;
+                currentBlock.hp = 1; // Скидаємо HP
+                
+                e.currentTarget.className = 'block block-air';
+                e.currentTarget.textContent = '';
+                
+                renderInventory(currentWorld.inventory);
+            }
+            
+            updateMainUi(GAME_STATE.currentWorld);
+            saveGameState();
+        }
+        
+        // =======================================
+        // == ENERGY REGENERATION & SOUNDS ==
+        // =======================================
+
+        let regenIntervalId;
+        
+        function startRegen() {
+             if (regenIntervalId) clearInterval(regenIntervalId);
+             
+             regenIntervalId = setInterval(() => {
+                if (GAME_STATE.energy < MAX_ENERGY) {
+                    GAME_STATE.energy = Math.min(GAME_STATE.energy + 1, MAX_ENERGY);
+                    updateMainUi(GAME_STATE.currentWorld);
+                    saveGameState();
+                }
+            }, 5000); // Реген 1 енергії кожні 5 секунд
+        }
+        
+        function playSound(type) {
+             if (SOUNDS[type]) {
+                 SOUNDS[type].currentTime = 0;
+                 SOUNDS[type].play().catch(e => console.log('Sound blocked'));
+             }
+        }
+
+        // =======================================
+        // == MENU HANDLERS & NAVIGATION ==
+        // =======================================
+
+        function startGame(worldName) {
+            GAME_STATE.currentWorld = worldName;
+            
+            // Сховати/Показати
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('world-menu').style.display = 'none';
+            document.getElementById('game-container').style.display = 'flex';
+            
+            // Рендеринг
+            renderWorld(worldName);
+            startRegen();
+            
+            Telegram.WebApp.MainButton.setText(`ЗБЕРЕГТИ ІНВЕНТАР`);
+            Telegram.WebApp.MainButton.show();
+        }
+
+        function createWorld() {
+            const nameInput = document.getElementById('world-name-input');
+            const name = nameInput.value.trim();
+            
+            if (name && !GAME_STATE.worlds[name]) {
+                generateWorld(name);
+                nameInput.value = '';
+                startGame(name);
+            } else {
+                alert("Недійсна назва або світ вже існує.");
+            }
+        }
+        
+        function handleSkinPurchase(skinId, price) {
+            const skin = SKIN_OPTIONS.find(s => s.id === skinId);
+            const isEquipped = GAME_STATE.selectedSkin === skinId;
+
+            if (isEquipped) {
+                 alert(`Скін ${skin.name} вже екіпіровано!`);
+                 return;
+            }
+
+            if (skin.purchased) {
+                // Екіпірування
+                GAME_STATE.selectedSkin = skinId;
+                saveGameState();
+                alert(`Ви обрали скін ${skin.name}!`);
+                renderSkinShop();
+                return;
+            }
+
+            // Імітація оплати Stars: ЦЕЙ КОД ВИКЛИКАЄ БОТ НА ЗАДНЬОМУ ПЛАНІ!
+            // Для справжнього виклику Telegram Stars тут має бути глибока інтеграція Payment API
+            
+            if (confirm(`Ви дійсно бажаєте придбати скін ${skin.name} за ${price} ⭐️?`)) {
+                // Імітуємо успішну оплату:
+                skin.purchased = true;
+                GAME_STATE.selectedSkin = skinId;
+                saveGameState();
+                alert(`✅ Скін ${skin.name} придбано!`);
+                renderSkinShop();
+            }
+        }
+        
+        function showMainMenu() {
+            // Скидання відображення
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('world-menu').style.display = 'none';
+            document.getElementById('create-world-menu').style.display = 'none';
+            document.getElementById('skin-shop-menu').style.display = 'none';
+            document.getElementById('main-menu').style.display = 'flex';
+            
+            Telegram.WebApp.MainButton.hide();
+            
+            // Оновлюємо скін у меню
+            document.getElementById('player-skin-display').textContent = SKIN_OPTIONS.find(s => s.id === GAME_STATE.selectedSkin).icon;
+        }
+
+        function showWorldMenu() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('world-menu').style.display = 'flex';
+            updateWorldsList();
+        }
+        
+        function createNewWorldMenu() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('create-world-menu').style.display = 'flex';
+        }
+
+        function showSkinShop() {
+            document.getElementById('main-menu').style.display = 'none';
+            document.getElementById('skin-shop-menu').style.display = 'flex';
+            renderSkinShop();
+        }
+
+        function telegramSaveAndClose() {
+            if (GAME_STATE.currentWorld) {
+                saveGameState();
+            }
+            Telegram.WebApp.close();
+        }
+
+
+        // =======================================
+        // == INIT ==
+        // =======================================
+        
+        function initWebApp() {
+            Telegram.WebApp.ready();
+            loadGameState();
+            
+            Telegram.WebApp.MainButton.onClick(telegramSaveAndClose);
+            Telegram.WebApp.onEvent('settingsButtonClicked', showMainMenu);
+            
+            showMainMenu();
+        }
+        
         initWebApp();
-        updateDisplay();
     </script>
 </body>
 </html>
