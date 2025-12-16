@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Farm - Tapper</title>
+    <style>
+        body {
+            background-color: #121212; /* Дуже темний фон */
+            color: #E0E0E0; /* Світлий текст */
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            user-select: none; /* Забороняємо виділення для кращого клікера */
+        }
+        #header {
+            width: 100%;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #00FF7F; /* Яскраво-зелений акцент */
+        }
+        #coin-display {
+            font-size: 3.5em;
+            font-weight: 900;
+            color: #FFFFFF;
+            text-shadow: 0 0 10px rgba(0, 255, 127, 0.5);
+            margin-bottom: 20px;
+        }
+        #tap-area {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            cursor: pointer;
+            transition: transform 0.1s;
+            border-radius: 50%;
+            background: radial-gradient(circle, #3a3a3a, #1a1a1a);
+            box-shadow: 0 0 30px rgba(0, 255, 127, 0.8), 0 5px 15px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 4em;
+            color: #00FF7F;
+            border: 5px solid #00FF7F;
+        }
+        #tap-area:active {
+            transform: scale(0.95);
+        }
+        .tap-effect {
+            position: absolute;
+            font-size: 2em;
+            color: yellow;
+            animation: floatUp 1s ease-out forwards;
+            pointer-events: none;
+            opacity: 0;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+        #stats {
+            width: 90%;
+            padding: 10px;
+            background-color: #252525;
+            border-radius: 10px;
+            text-align: left;
+            margin-top: 20px;
+            border: 1px solid #3a3a3a;
+        }
+        #stats div {
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+        }
+        #stats div:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        Міні-додаток Crypto Farm 💰
+    </div>
+
+    <div id="main-content">
+        <div id="coin-display">0</div>
+        
+        <div id="tap-area">
+            💎
+        </div>
+        
+        <div id="stats">
+            <div>Енергія: <span id="energy">100</span> / 100</div>
+            <div>Фармінг/сек: <span id="passive-rate">0</span></div>
+            <div>Клік за тапом: <span id="tap-power">1</span></div>
+        </div>
+    </div>
+
+    <div id="footer">
+        <button onclick="Telegram.WebApp.close()" style="background: #FF4500; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; margin-top: 20px;">
+            Закрити Гру
+        </button>
+    </div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+    <script>
+        // Ініціалізація та змінні гри
+        let coins = 0;
+        let energy = 100;
+        const maxEnergy = 100;
+        let tapPower = 1;
+        let passiveRate = 0; // Пасивний фармінг
+        
+        // DOM елементи
+        const coinDisplay = document.getElementById('coin-display');
+        const tapArea = document.getElementById('tap-area');
+        const energyDisplay = document.getElementById('energy');
+        const passiveRateDisplay = document.getElementById('passive-rate');
+        const tapPowerDisplay = document.getElementById('tap-power');
+
+        // Оновлення дисплея
+        function updateDisplay() {
+            coinDisplay.textContent = Math.floor(coins).toLocaleString();
+            energyDisplay.textContent = energy;
+            passiveRateDisplay.textContent = passiveRate;
+            tapPowerDisplay.textContent = tapPower;
+        }
+
+        // Логіка тапу
+        tapArea.addEventListener('click', function(event) {
+            if (energy >= 1) {
+                // Додаємо монети
+                coins += tapPower;
+                
+                // Витрачаємо енергію
+                energy -= 1; 
+
+                // Візуальний ефект
+                showTapEffect(event.clientX, event.clientY, tapPower);
+                
+                // Оновлюємо дисплей
+                updateDisplay();
+                
+                // Вібруємо, якщо Telegram підтримує
+                if (Telegram.WebApp.initData) {
+                    Telegram.WebApp.HapticFeedback.impactOccurred('light');
+                }
+                
+            } else {
+                // Візуальний ефект порожньої енергії
+                tapArea.style.border = '5px solid red';
+                setTimeout(() => tapArea.style.border = '5px solid #00FF7F', 200);
+            }
+        });
+
+        // Візуальний ефект додавання монет
+        function showTapEffect(x, y, amount) {
+            const effect = document.createElement('div');
+            effect.className = 'tap-effect';
+            effect.textContent = `+${amount}`;
+            
+            // Коригуємо позицію щодо загального вікна
+            const rect = tapArea.getBoundingClientRect();
+            effect.style.left = `${x - rect.left}px`;
+            effect.style.top = `${y - rect.top}px`;
+            
+            tapArea.appendChild(effect);
+            
+            // Видаляємо елемент після анімації
+            setTimeout(() => {
+                effect.remove();
+            }, 1000);
+        }
+
+        // Відновлення енергії та пасивний фармінг
+        setInterval(() => {
+            // Пасивний фармінг
+            coins += passiveRate / 10; // Розбиваємо на 10 частин для плавності
+
+            // Відновлення енергії (повільно)
+            if (energy < maxEnergy) {
+                energy = Math.min(maxEnergy, energy + 1); // Відновлюємо 1 енергію на секунду
+            }
+            updateDisplay();
+        }, 1000);
+
+
+        // Ініціалізація Telegram WebApp
+        function initWebApp() {
+             Telegram.WebApp.ready();
+             // Встановлюємо тему міні-додатку під темний режим
+             Telegram.WebApp.setHeaderColor('#121212'); 
+             Telegram.WebApp.setBackgroundColor('#121212');
+             // Можна надіслати дані про монети назад в бота, наприклад, при закритті
+             Telegram.WebApp.onEvent('mainButtonClicked', function() {
+                 Telegram.WebApp.sendData(JSON.stringify({ final_coins: Math.floor(coins) }));
+             });
+        }
+        
+        // Запуск
+        initWebApp();
+        updateDisplay();
+    </script>
+</body>
+</html>
